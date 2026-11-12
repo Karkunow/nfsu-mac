@@ -2,9 +2,13 @@
 # Встановлення обв'язки для Need for Speed Underground (US 1.4, NoCD) на Mac з Apple Silicon:
 # Wine Staging 11.6 + d9vk (D3D9 -> Vulkan -> Metal) + rosettax87 (швидкий x87) + WidescreenFix (+ HD-мод, ASI-моди).
 #
-#   zsh install.sh [тека гри]          типово ~/Games/NFSU
+#   zsh install.sh [тека гри]          готова тека гри, типово ~/Games/NFSU
+#   zsh install.sh <тека з дисками>    тека з образами двох дисків (BIN/CUE або ISO), патчем 1.4 (US_PATCH_4.exe)
+#                                      і NoCD Speed.exe: гра збирається в ~/Games/NFSU (або NFSU_GAME; якщо диски
+#                                      лежать саме там, то в ~/Games/NFSU/Game)
 #
 # Змінні (необов'язкові):
+#   NFSU_GAME      куди збирати гру з дисків (типово ~/Games/NFSU)
 #   NFSU_MAC_HOME  куди ставити Wine, префікс і запускалку (типово ~/Games/NFSU-mac)
 #   NFSU_MODS      де шукати завантажені архіви HD-моду й ASI-модів (типово ~/Downloads)
 #   NFSU_MVK       patched | orig  - примусово вибрати MoltenVK (типово: patched на macOS 26+, orig на 15 і старших)
@@ -12,9 +16,23 @@
 #   NFSU_ANY_EXE=1 не перевіряти Speed.exe (на свій ризик)
 emulate -L zsh
 set -e -o pipefail
+setopt extendedglob nullglob
 
 HERE=${0:A:h}
-GAME=${1:-$HOME/Games/NFSU}; GAME=${GAME:A}
+SRC=${1:-$HOME/Games/NFSU}; [[ -d "$SRC" ]] && SRC=${SRC:A}
+DISCS=
+# Тека з дисками: є образи (.bin/.iso), але немає Speed.exe у корені. Файли «._*» (exFAT/флешки) ігноруємо.
+DISC_IMGS=("$SRC"/**/*.(#i)(bin|iso)~*/._*(.N))
+DISC_IMGS=(${(o)DISC_IMGS})
+if [[ -f "$SRC/Game/Speed.exe" ]]; then
+  GAME=$SRC/Game              # уже зібрана з дисків, що лежать у тій самій теці
+elif [[ ! -f "$SRC/Speed.exe" && ${#DISC_IMGS} -ge 2 ]]; then
+  DISCS=$SRC; GAME=${NFSU_GAME:-$HOME/Games/NFSU}
+  [[ ${GAME:A} == $SRC ]] && GAME=$SRC/Game   # диски лежать у теці гри: збираємо в підтеку, щоб не змішувати
+else
+  GAME=$SRC
+fi
+mkdir -p "$GAME"; GAME=${GAME:A}
 BASE=${NFSU_MAC_HOME:-$HOME/Games/NFSU-mac}; mkdir -p "$BASE"; BASE=${BASE:A}
 MODS=${NFSU_MODS:-$HOME/Downloads}
 CACHE=$BASE/cache
@@ -32,6 +50,8 @@ WSF_URL=https://github.com/ThirteenAG/WidescreenFixesPack/releases/download/nfsu
 WSF_SHA=c4ea2a23caa5f34f52afd35a8a1e4da58a439eafe45dc605ceaa6685fc7e69b9   # реліз оновлюється на місці: інша сума = нова версія
 EXE_NOCD=c0fad450912952f53809a54690d235aa8b4e25b9f46650693c7cbee1b4c074b7      # Speed.exe US 1.4 NoCD
 EXE_NOCD_LAA=813ff41b8b042871df3302b737f4a190cfc84b7e748aa8f34ea1d9deea9f017d  # той самий з прапорцем Large Address Aware
+EXE_PATCHED=bab6a896c2d59644e7965d62daa964f193e6f7657d16a8bd6b11b9570f243a7d   # Speed.exe після офіційного патча 1.4 (із захистом)
+EFX_PATCHED=fd731c437b4107c00fde2923d69d42d444190335bab7a8f20f2ee4c9b7263988   # fx/filter.efx після патча 1.4
 
 say()  { print -P "%F{cyan}==>%f $*"; }
 warn() { print -P "%F{yellow}Увага:%f $*"; }
@@ -72,29 +92,22 @@ if (( OSMAJ < 15 )); then
   X87=0
   warn "macOS $OSV: rosettax87 потребує macOS 15+, ставлю без нього (FPS буде нижчим). Цю версію macOS не перевіряли."
 fi
-[[ -f "$GAME/Speed.exe" ]] || die "не знайдено $GAME/Speed.exe. Покладіть файли гри в цю теку або вкажіть теку: zsh install.sh /шлях/до/NFSU"
-[[ -d "$GAME/Tracks" ]] || die "у $GAME немає теки Tracks: це не повна тека гри"
+if [[ -n "$DISCS" ]]; then
+  if [[ -f "$GAME/Speed.exe" ]]; then
+    say "гра вже є в $GAME, з дисків не збираю"; DISCS=
+  else
+    PATCH=("$DISCS"/**/(#i)US_PATCH*.exe~*/._*(.N))
+    NOCD=; for f in "$DISCS"/**/(#i)speed.exe~*/._*(.N); do [[ "$(sha "$f")" == "$EXE_NOCD" ]] && { NOCD=$f; break; }; done
+    (( ${#PATCH} )) || die "у $DISCS немає патча 1.4 (US_PATCH_4.exe)"
+    [[ -n "$NOCD" ]] || die "у $DISCS немає NoCD Speed.exe для версії 1.4 (без нього гра вимагає диск і не стартує)"
+    say "збираю гру з дисків: ${#DISC_IMGS} образи -> $GAME"
+  fi
+fi
+[[ -n "$DISCS" || -f "$GAME/Speed.exe" ]] || die "не знайдено $GAME/Speed.exe. Покладіть файли гри в цю теку або вкажіть теку з грою чи з дисками: zsh install.sh /шлях"
 
 if ! arch -x86_64 /usr/bin/true 2>/dev/null; then
   say "ставлю Rosetta 2 (Wine працює через неї)"
   softwareupdate --install-rosetta --agree-to-license || die "Rosetta не встановилась"
-fi
-
-EXE_SHA=$(sha "$GAME/Speed.exe")
-if [[ "$EXE_SHA" != "$EXE_NOCD" && "$EXE_SHA" != "$EXE_NOCD_LAA" ]]; then
-  [[ -n "$NFSU_ANY_EXE" ]] || die "Speed.exe не той, з яким це перевірялось (потрібен US 1.4 NoCD; sha256 $EXE_SHA).
-  Якщо впевнені, запустіть з NFSU_ANY_EXE=1."
-  warn "Speed.exe невідомої версії, продовжую (NFSU_ANY_EXE=1)"
-fi
-mkdir -p "$BK"
-
-# ---------- 2. Speed.exe: Large Address Aware (гра бачить 4 ГБ пам'яті замість 2, потрібно для HD-текстур) ----------
-LFA=$(od -An -tu4 -j60 -N4 "$GAME/Speed.exe" | tr -d ' ')
-CH=$(od -An -tu2 -j$((LFA+22)) -N2 "$GAME/Speed.exe" | tr -d ' ')
-if (( (CH & 0x20) == 0 )); then
-  backup Speed.exe
-  printf "\\x$(printf %02x $(( (CH | 0x20) & 0xFF )))" | dd of="$GAME/Speed.exe" bs=1 seek=$((LFA+22)) conv=notrunc 2>/dev/null
-  say "Speed.exe: увімкнено Large Address Aware (оригінал у _mac-backup/orig)"
 fi
 
 # ---------- 3. Wine 11.6 ----------
@@ -141,6 +154,69 @@ fi
 "$WINEBIN/wine" reg add 'HKCU\Software\Wine\Mac Driver' /v RetinaMode /t REG_SZ /d y /f >/dev/null 2>&1
 "$WINEBIN/wineserver" -w || true
 grep -q '"RetinaMode"="y"' "$PFX/user.reg" || die "не вдалось записати RetinaMode у реєстр префікса"
+
+# ---------- 6a. Гра з дисків: образи -> файли, патч 1.4, NoCD ----------
+if [[ -n "$DISCS" ]]; then
+  W=$(mktemp -d "$BASE/tmp.XXXX")
+  detach_all() { for m in "$W"/m*(N/); do hdiutil detach -quiet "$m" 2>/dev/null || true; done; }
+  trap 'detach_all; rm -rf "$W"' EXIT
+  n=0
+  for img in $DISC_IMGS; do
+    n=$((n+1)); iso=$img
+    if [[ $img == *.(#i)bin ]]; then
+      # BIN (MODE1/2352): кожен сектор 2352 байти, з них дані 2048 зі зсуву 16 -> звичайний ISO
+      sz=$(stat -f %z "$img"); (( sz % 2352 == 0 )) || die "${img:t}: не схоже на образ MODE1/2352"
+      say "диск $n: ${img:t} -> ISO"
+      iso=$W/d$n.iso
+      /usr/bin/perl -e 'open(I,"<",$ARGV[0]) or die $!; open(O,">",$ARGV[1]) or die $!; binmode I; binmode O;
+        while (read(I,$b,2352*2048)) { my $o=""; for (my $i=0;$i<length($b);$i+=2352) { $o.=substr($b,$i+16,2048) } print O $o }' \
+        "$img" "$iso" || die "не вдалось перетворити ${img:t}"
+    fi
+    mkdir -p "$W/m$n"
+    hdiutil attach -readonly -nobrowse -mountpoint "$W/m$n" "$iso" >/dev/null || die "macOS не відкрила образ ${img:t}"
+    rsync -a --exclude DirectX/ "$W/m$n/" "$GAME/"   # DirectX 9 з диска під Wine не потрібен
+    hdiutil detach -quiet "$W/m$n" || true
+    [[ $iso == $W/* ]] && rm -f "$iso"
+  done
+  chmod -R u+rw "$GAME"
+  [[ -f "$GAME/Speed.exe" && -d "$GAME/Tracks" ]] || die "після розпакування дисків немає Speed.exe або Tracks: перевірте образи"
+  # Офіційний патч 1.4 (RTPatch): застосовується сам до поточної теки, без вікон
+  say "патч 1.4"
+  # Патч шукає гру за ключем реєстру EA (без нього пише «Update Aborted» і чекає на OK).
+  # Сам патч копіюємо в тимчасову теку: шлях до диска може мати пробіли й кирилицю.
+  cp "${PATCH[1]}" "$W/US_PATCH.exe"
+  WGAME=$("$WINEBIN/wine" winepath -w "$GAME" 2>/dev/null | tr -d '\r')
+  for v in 32 64; do
+    "$WINEBIN/wine" reg add 'HKLM\SOFTWARE\EA Games\Need For Speed Underground' /v 'Install Dir' /t REG_SZ /d "$WGAME" /f /reg:$v >/dev/null 2>&1 || true
+  done
+  (cd "$GAME" && "$WINEBIN/wine" "$W/US_PATCH.exe" >/dev/null 2>&1) &
+  PP=$!
+  for i in {1..240}; do kill -0 $PP 2>/dev/null || break; sleep 1; done
+  if kill -0 $PP 2>/dev/null; then "$WINEBIN/wineserver" -k || true; fi
+  "$WINEBIN/wineserver" -w || true
+  [[ "$(sha "$GAME/Speed.exe")" == "$EXE_PATCHED" ]] || die "патч 1.4 не застосувався (Speed.exe не змінився)"
+  [[ "$(sha "$GAME/fx/filter.efx")" == "$EFX_PATCHED" ]] || warn "fx/filter.efx після патча інший, ніж очікувався"
+  cp "$NOCD" "$GAME/Speed.exe"; chmod 755 "$GAME/Speed.exe"
+  say "гра зібрана: версія 1.4, NoCD"
+  detach_all; rm -rf "$W"; trap - EXIT
+fi
+
+# ---------- 6b. Speed.exe ----------
+EXE_SHA=$(sha "$GAME/Speed.exe")
+if [[ "$EXE_SHA" != "$EXE_NOCD" && "$EXE_SHA" != "$EXE_NOCD_LAA" ]]; then
+  [[ -n "$NFSU_ANY_EXE" ]] || die "Speed.exe не той, з яким це перевірялось (потрібен US 1.4 NoCD; sha256 $EXE_SHA).
+  Якщо впевнені, запустіть з NFSU_ANY_EXE=1."
+  warn "Speed.exe невідомої версії, продовжую (NFSU_ANY_EXE=1)"
+fi
+mkdir -p "$BK"
+# Large Address Aware: гра бачить 4 ГБ пам'яті замість 2, потрібно для HD-текстур
+LFA=$(od -An -tu4 -j60 -N4 "$GAME/Speed.exe" | tr -d ' ')
+CH=$(od -An -tu2 -j$((LFA+22)) -N2 "$GAME/Speed.exe" | tr -d ' ')
+if (( (CH & 0x20) == 0 )); then
+  backup Speed.exe
+  printf "\\x$(printf %02x $(( (CH | 0x20) & 0xFF )))" | dd of="$GAME/Speed.exe" bs=1 seek=$((LFA+22)) conv=notrunc 2>/dev/null
+  say "Speed.exe: увімкнено Large Address Aware (оригінал у _mac-backup/orig)"
+fi
 
 # ---------- 7. d9vk ----------
 fetch $D9VK_URL $D9VK_SHA
