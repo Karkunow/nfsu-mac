@@ -65,7 +65,13 @@ backup() {  # backup <шлях відносно гри>: перший оригі
 [[ "$(sysctl -n hw.optional.arm64 2>/dev/null)" == 1 ]] || die "потрібен Mac з процесором Apple (M1 і новіші). На Intel цей рецепт не перевірявся."
 OSV=$(sw_vers -productVersion); OSMAJ=${OSV%%.*}
 say "macOS $OSV, $(sysctl -n machdep.cpu.brand_string)"
-(( OSMAJ >= 13 )) || warn "macOS $OSV не перевірялась (перевірено 15 і 27)"
+(( OSMAJ >= 11 )) || die "потрібна macOS 11 або новіша (MoltenVK не працює на старших)"
+# rosettax87 (швидкий x87) підтримує лише macOS 15+; на старших гра піде без нього: працює, але повільніше
+X87=1
+if (( OSMAJ < 15 )); then
+  X87=0
+  warn "macOS $OSV: rosettax87 потребує macOS 15+, ставлю без нього (FPS буде нижчим). Цю версію macOS не перевіряли."
+fi
 [[ -f "$GAME/Speed.exe" ]] || die "не знайдено $GAME/Speed.exe. Покладіть файли гри в цю теку або вкажіть теку: zsh install.sh /шлях/до/NFSU"
 [[ -d "$GAME/Tracks" ]] || die "у $GAME немає теки Tracks: це не повна тека гри"
 
@@ -165,6 +171,7 @@ say "WidescreenFix (ThirteenAG) встановлено"
 # ---------- 10. Запускалка й іконка ----------
 cp "$HERE/nfsu.sh" "$HERE/mods.sh" "$BASE/"; chmod +x "$BASE/nfsu.sh" "$BASE/mods.sh"
 print -r -- "GAME=${(q)GAME}" > "$BASE/config.sh"
+print -r -- "X87=$X87" >> "$BASE/config.sh"
 if [[ -z "$NFSU_NO_APP" ]]; then
   DAPP="$HOME/Desktop/NFSU.app"
   rm -rf "$DAPP"

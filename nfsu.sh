@@ -12,8 +12,8 @@ if ps -axo command | grep -q '[S]peed\.exe$'; then
 fi
 
 cd "$GAME" || exit 1
+[[ "${X87:-1}" == 1 ]] && export ROSETTA_X87_PATH="$BASE/rosettax87/runtime_loader"   # лише macOS 15+
 WINEPREFIX="$BASE/prefix" \
-ROSETTA_X87_PATH="$BASE/rosettax87/runtime_loader" \
 WINEDLLOVERRIDES="d3d9=n;dinput8=n,b" \
 DXVK_ASYNC="${DXVK_ASYNC-1}" \
 DXVK_HUD="${DXVK_HUD-}" \
