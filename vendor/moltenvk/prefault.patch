@@ -1,0 +1,17 @@
+--- a/MoltenVK/MoltenVK/GPUObjects/MVKDeviceMemory.mm
++++ b/MoltenVK/MoltenVK/GPUObjects/MVKDeviceMemory.mm
+@@ -253,6 +253,14 @@ bool MVKDeviceMemory::ensureMTLBuffer() {
+ 	} else if (_pHostMemory) {
+ 		auto rezOpts = getMTLResourceOptions();
+ 		if (_isHostMemImported) {
++			// Local patch: pre-fault imported host pages from MoltenVK's 64-bit code (read-modify-write keeps contents).
++			// Under Rosetta, first-touch faults on these pages coming from translated 32-bit (wow64) code
++			// were routed through the Rosetta exception server and cost milliseconds each; from 64-bit
++			// code they cost ~1us. Without this, texture uploads into fresh Wine-imported memory stall for seconds.
++			{
++				volatile uint8_t* p = (volatile uint8_t*)_pHostMemory;
++				for (VkDeviceSize o = 0; o < _allocationSize; o += 4096) { p[o] = p[o]; }
++			}
+ 			buf = [getMTLDevice() newBufferWithBytesNoCopy: _pHostMemory length: memLen options: rezOpts deallocator: nil];	// retained
+ 		} else {
+ 			buf = [getMTLDevice() newBufferWithBytes: _pHostMemory length: memLen options: rezOpts];     // retained

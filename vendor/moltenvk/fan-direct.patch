@@ -1,0 +1,40 @@
+--- a/MoltenVK/MoltenVK/Commands/MVKCmdDraw.mm
++++ b/MoltenVK/MoltenVK/Commands/MVKCmdDraw.mm
+@@ -225,6 +225,37 @@ void MVKCmdDraw::encode(MVKCommandEncoder* cmdEncoder) {
+
+ 	// Metal doesn't support triangle fans, so encode it as triangles via an indexed indirect triangles command instead.
+ 	if (pipeline->getVkPrimitiveTopology() == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN) {
++		// Fast path (local patch): for a non-indexed, non-tessellated fan the triangle-list indices are known
++		// on the CPU, so build them here and issue one direct indexed draw inside the current render encoder.
++		// The stock path runs a compute kernel per draw, which ends and restarts the Metal render pass and
++		// allocates a kMVKMaxDrawIndirectVertexCount-sized temp buffer; with many small fans that dominates.
++		if ( !pipeline->isTessellationPipeline() && mtlFeats.baseVertexInstanceDrawing && _vertexCount >= 3 ) {
++			uint32_t triCount = _vertexCount - 2;
++			uint32_t idxCount = triCount * 3;
++			auto* idxBuff = cmdEncoder->getTempMTLBuffer(idxCount * sizeof(uint32_t));
++			auto* pIdx = (uint32_t*)idxBuff->getContents();
++			// Vulkan fan triangle i = (v[i+1], v[i+2], v[0]); keeps winding and first-vertex provoking vertex.
++			for (uint32_t i = 0; i < triCount; i++) {
++				pIdx[3 * i + 0] = _firstVertex + i + 1;
++				pIdx[3 * i + 1] = _firstVertex + i + 2;
++				pIdx[3 * i + 2] = _firstVertex;
++			}
++			cmdEncoder->_isIndexedDraw = true;
++			cmdEncoder->finalizeDrawState(kMVKGraphicsStageRasterization);
++			if ( !pipeline->hasValidMTLPipelineStates() ) { return; }
++			MVKRenderSubpass* subpass = cmdEncoder->getSubpass();
++			uint32_t viewCount = subpass->isMultiview() ? subpass->getViewCountInMetalPass(cmdEncoder->getMultiviewPassIndex()) : 1;
++			cmdEncoder->getState().offsetZeroDivisorVertexBuffers(*cmdEncoder, kMVKGraphicsStageRasterization, pipeline, _firstInstance);
++			[cmdEncoder->_mtlRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeTriangle
++			                                          indexCount: idxCount
++			                                           indexType: MTLIndexTypeUInt32
++			                                         indexBuffer: idxBuff->_mtlBuffer
++			                                   indexBufferOffset: idxBuff->_offset
++			                                       instanceCount: _instanceCount * viewCount
++			                                          baseVertex: 0
++			                                        baseInstance: _firstInstance];
++			return;
++		}
+ 		encodeIndexedIndirect(cmdEncoder);
+ 		return;
+ 	}
