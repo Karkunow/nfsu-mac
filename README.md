@@ -30,7 +30,8 @@
 1. Покладіть диски з грою в `~/Games/NFSU`. Це вміст теки з роздачі як є: `Disc 1`, `Disc 2` (образи `.bin`/`.cue` або `.iso`), `NFSU_US_Patch_1.4` і `NFSU_US_Crack_1.4`. Можна й в інше місце, тоді вкажіть шлях у кроці 3.
    Скрипт сам збере з дисків гру в `~/Games/NFSU/Game`: перетворить образи, поставить патч 1.4 і NoCD. Це займає близько хвилини і не вимагає жодних кліків.
    Якщо у вас уже є готова тека гри (з `Speed.exe` версії 1.4 NoCD), можна покласти в `~/Games/NFSU` її замість дисків.
-2. (Необов'язково) Завантажте моди з Nexus Mods у `~/Downloads`, архіви розпаковувати не треба:
+2. (Необов'язково) Завантажте моди з Nexus Mods у «Завантаження» (`~/Downloads`), архіви розпаковувати не треба. На Nexus тисніть **Manual download**, а не завантаження через Vortex. Скрипт сам знайде в архівах потрібні файли. Підходять zip, 7z і rar або вже розпакована тека; перевірено лише zip. Якщо архів не розпізнається, розпакуйте його в «Завантаження» і запустіть ще раз.
+   Моди, докачані після встановлення, ставить `~/Games/NFSU-mac/mods.sh install`. Якщо архіви лежать не в «Завантаженнях»: `NFSU_MODS=/шлях/до/теки zsh install.sh`.
    - **HD-текстури трас**: [Nexus: NFS Underground, мод 4](https://www.nexusmods.com/needforspeedunderground/mods/4). Скрипт бере з архіву 31 файл `Tracks/TEX….TRACK.BIN`.
    - **ASI-моди** (HD-відбиття, додаткові налаштування, розширений тюнінг): пакет *Photorealistic Need for Speed Underground* у [розділі NFS Underground на Nexus](https://www.nexusmods.com/needforspeedunderground/mods/). З нього беруться лише `NFSUHDReflections`, `NFSUExtraOptions` і `NFSU_ExtendedCustomization`. ReShade і старий WidescreenFix з цього пакета під Mac не працюють, тому скрипт їх не чіпає.
 3. Відкрийте **Термінал**, перейдіть у теку цього репозиторію і запустіть:
