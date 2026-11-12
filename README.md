@@ -1,91 +1,84 @@
 # Need for Speed Underground на Mac (Apple Silicon)
 
-Скрипт ставить усе, щоб NFS Underground (2003) працювала на Mac з процесором Apple (M1–M4), швидко й на весь екран.
+Один скрипт: NFS Underground (2003) на Mac з M1–M4, на весь екран, 50–120 к/с.
 
 ## Вимоги
 
-| | Потрібно |
-|---|---|
-| **Mac** | процесор Apple: M1, M2, M3, M4 або новіший. Mac з Intel не підтримується. |
-| **macOS** | 15 Sequoia або новіша (перевірено 15.8.1 на M1 Pro і 27.0.1 на M4 Pro). На 11–14 скрипт поставить усе без rosettax87, бо той потребує 15+: гра має запуститись, але FPS буде нижчим, і там ніхто не перевіряв. Старші за 11 не підтримуються. |
-| **Гра** | Need for Speed Underground, **US**: образи двох дисків + патч 1.4 + NoCD `Speed.exe` (скрипт збере гру сам) або вже готова тека гри версії 1.4 NoCD. Скрипт звіряє `Speed.exe` і з іншою версією не ставить. |
-| **Місце на диску** | ~3 ГБ (Wine 1,4 ГБ, wine-префікс 1,1 ГБ, завантаження 0,3 ГБ). З HD-текстурами ще ~3,5 ГБ, а під час встановлення тимчасово ще стільки ж (архів моду потім можна видалити). |
-| **Інтернет** | лише під час встановлення: ~330 МБ з GitHub (Wine, d9vk, WidescreenFix). |
-| **Інше** | Термінал. Homebrew і Xcode не потрібні. Якщо немає Rosetta 2, скрипт поставить її сам. |
-
-## Що ставиться
-
-- **Wine Staging 11.6**: запускає Windows-гру. Саме 11.6, бо новіші прибрали підтримку rosettax87.
-- **d9vk**: перекладає DirectX 9 гри у Vulkan, а через MoltenVK у Metal. Це дає ~50–120 к/с замість 15–23 через стандартний перекладач Wine (wined3d).
-- **rosettax87**: швидка емуляція старих математичних інструкцій x87, якими гра користується постійно.
-- **WidescreenFix** (ThirteenAG): широкий екран без розтягування і повноекранний режим без рамки. Без нього гра на Mac не стартує.
-- **Пропатчений MoltenVK**: потрібен на macOS 26+, ставиться автоматично. Без нього на macOS 27 кожна зміна сцени зависала на ~20 с. Патчі лежать у `vendor/moltenvk/`.
-- **HD-моди** (необов'язково): HD-текстури трас і ASI-моди з Nexus Mods (див. нижче).
-
-Самої гри й модів з Nexus у репозиторії немає: їх кожен бере сам.
+- Mac з Apple M1 або новішим. Intel не підтримується.
+- macOS 15+ (перевірено на 15.8.1 і 27.0.1). На 11–14 ставиться без rosettax87: FPS нижчий, не перевірено.
+- Гра NFSU US: образи двох дисків + патч 1.4 + NoCD `Speed.exe`, або готова тека гри 1.4 NoCD.
+- ~3 ГБ на диску (+3,5 ГБ з HD-текстурами, і ще стільки ж тимчасово під час встановлення).
+- Інтернет під час встановлення (~330 МБ). Homebrew і Xcode не потрібні.
 
 ## Встановлення
 
-0. Скачати гру можна [тут](https://shorturl.at/Wc9G0).
-1. Покладіть диски з грою в `~/Games/NFSU`. Це вміст теки з роздачі як є: `Disc 1`, `Disc 2` (образи `.bin`/`.cue` або `.iso`), `NFSU_US_Patch_1.4` і `NFSU_US_Crack_1.4`. Можна й в інше місце, тоді вкажіть шлях у кроці 3.
-   Скрипт сам збере з дисків гру в `~/Games/NFSU/Game`: перетворить образи, поставить патч 1.4 і NoCD. Це займає близько хвилини і не вимагає жодних кліків.
-   Якщо у вас уже є готова тека гри (з `Speed.exe` версії 1.4 NoCD), можна покласти в `~/Games/NFSU` її замість дисків.
-2. (Необов'язково) Завантажте моди з Nexus Mods у «Завантаження» (`~/Downloads`), архіви розпаковувати не треба. На Nexus тисніть **Manual download**, а не завантаження через Vortex. Скрипт сам знайде в архівах потрібні файли. Підходять zip, 7z і rar або вже розпакована тека; перевірено лише zip. Якщо архів не розпізнається, розпакуйте його в «Завантаження» і запустіть ще раз.
-   Моди, докачані після встановлення, ставить `~/Games/NFSU-mac/mods.sh install`. Якщо архіви лежать не в «Завантаженнях»: `NFSU_MODS=/шлях/до/теки zsh install.sh`.
-   - **HD-текстури трас**: [Nexus: NFS Underground, мод 4](https://www.nexusmods.com/needforspeedunderground/mods/4). Скрипт бере з архіву 31 файл `Tracks/TEX….TRACK.BIN`.
-   - **ASI-моди** (HD-відбиття, додаткові налаштування, розширений тюнінг): пакет *Photorealistic Need for Speed Underground* у [розділі NFS Underground на Nexus](https://www.nexusmods.com/needforspeedunderground/mods/). З нього беруться лише `NFSUHDReflections`, `NFSUExtraOptions` і `NFSU_ExtendedCustomization`. ReShade і старий WidescreenFix з цього пакета під Mac не працюють, тому скрипт їх не чіпає.
-3. Відкрийте **Термінал**, перейдіть у теку цього репозиторію і запустіть:
+0. Гра: [завантажити](https://shorturl.at/Wc9G0).
+1. Покладіть теку з роздачі як є (`Disc 1`, `Disc 2`, `NFSU_US_Patch_1.4`, `NFSU_US_Crack_1.4`) у `~/Games/NFSU`.
+   Замість дисків можна покласти готову теку гри з `Speed.exe`.
+2. Необов'язково: моди з Nexus. Завантажте **Manual download** у `~/Downloads`, не розпаковуйте:
+   - HD-текстури трас: [мод 4](https://www.nexusmods.com/needforspeedunderground/mods/4);
+   - ASI-моди: пакет *Photorealistic Need for Speed Underground* у [розділі NFSU](https://www.nexusmods.com/needforspeedunderground/mods/).
+3. Завантажте цей репозиторій (**Code → Download ZIP** або `git clone`), відкрийте Термінал у його теці:
    ```
    zsh install.sh
    ```
-   або, якщо диски чи гра лежать деінде:
-   ```
-   zsh install.sh "/шлях/до/теки"
-   ```
-   Диски можуть лежати й на зовнішньому диску: тоді гра збереться в `~/Games/NFSU` (інше місце задає змінна `NFSU_GAME`).
-   Скрипт сам визначить процесор і версію macOS, за потреби поставить Rosetta 2, завантажить Wine (~320 МБ) і решту, звірить контрольні суми й створить на робочому столі іконку **NFSU**.
+   Якщо диски чи гра лежать деінде (наприклад, на зовнішньому диску): `zsh install.sh "/шлях/до/теки"`.
 
-Оригінальні файли гри, які скрипт замінює, зберігаються в `<тека гри>/_mac-backup/`.
+Скрипт сам:
+- перевірить Mac і macOS, за потреби поставить Rosetta 2;
+- збере гру з дисків у `~/Games/NFSU/Game` (образи → файли, патч 1.4, NoCD; ~1 хв, без кліків);
+- завантажить Wine 11.6, d9vk, WidescreenFix і звірить контрольні суми;
+- на macOS 26+ поставить пропатчений MoltenVK (без нього на 27 зависання ~20 с на кожній зміні сцени);
+- поставить моди, якщо знайде їх у `~/Downloads` (zip, 7z, rar або розпаковані; перевірено лише zip);
+- створить іконку **NFSU** на робочому столі.
+
+Замінені файли гри зберігаються в `<тека гри>/_mac-backup/`.
 
 ## Гра
 
-- Запуск: іконка **NFSU** на робочому столі, або `~/Games/NFSU-mac/nfsu.sh`.
-- Перший запуск і перші заїзди можуть пригальмовувати: d9vk компілює шейдери, далі бере їх з кешу.
-- На macOS 27 при першому запуску система може спитати дозвіл на налагодження (*authorize debugging*). Його потребує rosettax87, треба дозволити.
+- Запуск: іконка **NFSU** або `~/Games/NFSU-mac/nfsu.sh`.
 - Лічильник FPS: `DXVK_HUD=fps ~/Games/NFSU-mac/nfsu.sh`.
-- Роздільність вибирається в налаштуваннях самої гри (розділ Display).
-- Якщо гра «застигла», а Mac працює: клацніть на інше вікно і назад у гру. Неактивне вікно гра ставить на паузу.
+- Роздільність: у налаштуваннях гри (Display).
+- Перші заїзди можуть пригальмовувати: компілюються шейдери.
+- macOS 27, перший запуск: дозвольте *authorize debugging* (потрібно rosettax87).
+- Гра застигла: клацніть на інше вікно і назад у гру (неактивне вікно гра ставить на паузу).
 
-## Моди: увімкнути / вимкнути
+## Моди
 
 ```
+~/Games/NFSU-mac/mods.sh install     # поставити моди, докачані пізніше
 ~/Games/NFSU-mac/mods.sh status
-~/Games/NFSU-mac/mods.sh hd off        # оригінальні текстури трас (hd on - повернути HD)
-~/Games/NFSU-mac/mods.sh asi off       # вимкнути ASI-моди (якщо FPS замалий)
-~/Games/NFSU-mac/mods.sh install       # якщо архіви модів завантажили вже після встановлення
+~/Games/NFSU-mac/mods.sh hd on|off   # HD-текстури трас
+~/Games/NFSU-mac/mods.sh asi on|off  # ASI-моди (вимкнути, якщо FPS замалий)
 ```
 
-Зміни діють з наступного запуску гри.
+Діє з наступного запуску гри. Архів не розпізнався: розпакуйте його в `~/Downloads` і повторіть `install`.
+З ASI-пакета беруться лише `NFSUHDReflections`, `NFSUExtraOptions`, `NFSU_ExtendedCustomization`; ReShade і старий WidescreenFix з нього під Mac не працюють.
 
 ## Видалення
 
 ```
-zsh uninstall.sh            # повертає оригінальні файли гри, прибирає Wine й іконку; wine-префікс лишається
-zsh uninstall.sh --all      # те саме разом із префіксом
+zsh uninstall.sh          # повернути файли гри, прибрати Wine й іконку (префікс лишається)
+zsh uninstall.sh --all    # разом із префіксом
 ```
 
-## Налаштування для досвідчених
+## Змінні
 
 | Змінна | Що робить |
 |---|---|
-| `NFSU_MAC_HOME` | куди ставити Wine/префікс/запускалку (типово `~/Games/NFSU-mac`) |
+| `NFSU_GAME` | куди збирати гру з дисків (типово `~/Games/NFSU`; якщо диски там же, то `~/Games/NFSU/Game`) |
+| `NFSU_MAC_HOME` | куди ставити Wine, префікс, запускалку (типово `~/Games/NFSU-mac`) |
 | `NFSU_MODS` | де шукати архіви модів (типово `~/Downloads`) |
-| `NFSU_MVK=patched` / `orig` | примусово пропатчений або штатний MoltenVK |
-| `NFSU_NO_APP=1` | не створювати іконку |
-| `NFSU_ANY_EXE=1` | не перевіряти версію `Speed.exe` (на свій ризик) |
+| `NFSU_MVK=patched\|orig` | примусово вибрати MoltenVK |
+| `NFSU_NO_APP=1` | без іконки |
+| `NFSU_ANY_EXE=1` | не перевіряти версію `Speed.exe` |
 
-## Ліцензії сторонніх компонентів
+## Що всередині
 
-- `vendor/rosettax87/`: [rosettax87_jit](https://github.com/Lifeisawful/rosettax87_jit), MIT, файли релізу без змін.
-- `vendor/moltenvk/`: [MoltenVK](https://github.com/KhronosGroup/MoltenVK) 1.4.1, Apache 2.0, зібраний із двома патчами, що лежать поруч.
-- Завантажуються з офіційних релізів: [Wine](https://github.com/aitorciki/macOS_Wine_builds) (LGPL), [d9vk](https://github.com/Sikarugir-App/d9vk) (zlib), [WidescreenFix](https://github.com/ThirteenAG/WidescreenFixesPack).
+- [Wine Staging 11.6](https://github.com/aitorciki/macOS_Wine_builds) (LGPL): новіші не підтримують rosettax87.
+- [d9vk](https://github.com/Sikarugir-App/d9vk) (zlib): DirectX 9 → Vulkan → Metal, 50–120 к/с замість 15–23 через wined3d.
+- [rosettax87](https://github.com/Lifeisawful/rosettax87_jit) (MIT, `vendor/rosettax87/`, без змін): швидкі x87-інструкції.
+- [WidescreenFix](https://github.com/ThirteenAG/WidescreenFixesPack): широкий екран і безрамковий режим; без нього гра на Mac не стартує.
+- [MoltenVK](https://github.com/KhronosGroup/MoltenVK) 1.4.1 (Apache 2.0, `vendor/moltenvk/`): збірка з двома патчами, що лежать поруч.
+
+Гри й модів з Nexus у репозиторії немає.

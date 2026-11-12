@@ -134,6 +134,7 @@ else
   cp -p "$MVK.orig" "$MVK"
   say "MoltenVK: штатний"
 fi
+xattr -d com.apple.quarantine "$MVK" 2>/dev/null || true   # репозиторій могли завантажити як ZIP з браузера
 codesign -f -s - "$MVK" 2>/dev/null || true
 
 # ---------- 5. rosettax87 ----------
